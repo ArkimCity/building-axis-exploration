@@ -1,5 +1,5 @@
 import random
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import gym
 import numpy as np
@@ -66,7 +66,9 @@ class SearchSapce:
             x_intervals: List[float],
             y_intervals: List[float],
             x_offset: List[float],
-            y_offset: List[float]
+            y_offset: List[float],
+            x_rows_max: int,
+            y_rows_max: int
     ):
         """
         Args:
@@ -75,12 +77,16 @@ class SearchSapce:
             pillar_y_width: List[float]
             x_intervals: List[float]
             y_intervals: List[float]
+            x_rows_max: int
+            y_rows_max: int
         """
         self.axis_index = axis_index
         self.pillar_x_width = pillar_x_width
         self.pillar_y_width = pillar_y_width
         self.x_intervals = x_intervals
         self.y_intervals = y_intervals
+        self.x_rows_max = x_rows_max
+        self.y_rows_max = y_rows_max
         self.x_offset = x_offset
         self.y_offset = y_offset
 
@@ -89,8 +95,8 @@ class SearchSapce:
             axis_index=random.choice(self.axis_index),
             pillar_x_width=random.choice(self.pillar_x_width),
             pillar_y_width=random.choice(self.pillar_y_width),
-            x_intervals=random.choices(self.x_intervals, k=10),  # Allow duplicates
-            y_intervals=random.choices(self.y_intervals, k=10),  # Allow duplicates
+            x_intervals=random.choices(self.x_intervals, k=self.x_rows_max),
+            y_intervals=random.choices(self.y_intervals, k=self.y_rows_max),
             x_offset=random.uniform(*self.x_offset),
             y_offset=random.uniform(*self.y_offset),
         )
@@ -169,9 +175,7 @@ class ParcelEnv(gym.Env):
 
         self.__is_ready = True
 
-    def build(self, action: Action):
-        assert self.__is_ready, "Environment is not ready, Please call initialize() first."
-
+    def make_base(self, action: Action):
         if action.axis_index == 0:
             main_axis = self.longest_edge_axis
         elif action.axis_index == 1:
@@ -193,21 +197,72 @@ class ParcelEnv(gym.Env):
         # 중심점을 기준으로 각 pillars 의 위치 지정
         x_locations = [sum(action.x_intervals[:i]) for i, _ in enumerate(action.x_intervals)]
         y_locations = [sum(action.y_intervals[:i]) for i, _ in enumerate(action.y_intervals)]
-        pillar_centers: List[np.ndarray] = []
-        for x_location in x_locations:
-            for y_location in y_locations:
-                each_pillar_center = offset_plane.origin + offset_plane.x_axis * x_location + offset_plane.y_axis * y_location
-                pillar_centers.append(each_pillar_center)
 
-        pillar_polygons: List[Polygon] = [
-            make_pillar_polygon(
-                pillar_center,
-                offset_plane.x_axis,
-                offset_plane.y_axis,
-                action.pillar_x_width,
-                action.pillar_y_width
-            )
-            for pillar_center in pillar_centers
+        # make 3d array with x_locations, y_locations - shape: (len(x_locations), len(y_locations), 2)
+        pillar_centers: np.ndarray = np.array([
+            [
+                offset_plane.origin + offset_plane.x_axis * x_location + offset_plane.y_axis * y_location
+                for y_location in y_locations
+            ]
+            for x_location in x_locations
+        ])
+
+        pillar_polygons: List[List[Polygon]] = [
+            [
+                make_pillar_polygon(
+                    pillar_center,
+                    offset_plane.x_axis,
+                    offset_plane.y_axis,
+                    action.pillar_x_width,
+                    action.pillar_y_width
+                )
+                for pillar_center in _
+            ]
+            for _ in pillar_centers
         ]
+
+        return base_plane, offset_plane, pillar_centers, pillar_polygons
+
+    def find_valid_pillars(self, pillar_centers: np.ndarray, pillar_polygons: List[List[Polygon]]):
+
+        valid_pairs_all_floors: List[List[Tuple[int, int]]] = []
+        valid_pillar_centers_all_floors: List[np.ndarray] = []
+        valid_pillar_polygons_all_floors: List[List[Polygon]] = []
+
+        for floor_idx, each_legal_geom in enumerate(self.legal_geoms):
+            pillar_polygon_within_bool_map = np.array([
+                [
+                    pillar_polygon.within(each_legal_geom)
+                    for pillar_polygon in each_pillar_polygons
+                ]
+                for each_pillar_polygons in pillar_polygons
+            ])
+
+            valid_pairs = []
+            for i in range(len(pillar_polygon_within_bool_map) - 1):
+                for j in range(len(pillar_polygon_within_bool_map[0]) - 1):
+                    pairs = [(i + dx, j + dy) for dx in (0, 1) for dy in (0, 1)]
+
+                    # 모두 법규 안에 포함되고, 아래층에서 올라올 수 있는 경우 허용
+                    if all([pillar_polygon_within_bool_map[x][y] for x, y in pairs]) and (floor_idx == 0 or all([
+                        pair in valid_pairs_all_floors[floor_idx - 1] for pair in pairs
+                    ])):
+                        valid_pairs.extend(pairs)
+            valid_pairs = list(set(valid_pairs))
+
+            valid_pillar_centers = [pillar_centers[i][j] for i, j in valid_pairs]
+            valid_pillar_polygons = [pillar_polygons[i][j] for i, j in valid_pairs]
+
+            valid_pairs_all_floors.append(valid_pairs)
+            valid_pillar_centers_all_floors.append(valid_pillar_centers)
+            valid_pillar_polygons_all_floors.append(valid_pillar_polygons)
+
+        return valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors
+
+    def build(self, action: Action):
+        assert self.__is_ready, "Environment is not ready, Please call initialize() first."
+
+        base_plane, offset_plane, pillar_centers, pillar_polygons = self.make_base(action)
+        valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors = self.find_valid_pillars(pillar_centers, pillar_polygons)
 
         return

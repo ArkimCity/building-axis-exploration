@@ -9,7 +9,7 @@ from shapely.affinity import translate
 from shapely.geometry import MultiPolygon, Polygon, LineString
 
 from domino_gym.types import Plane
-from domino_gym.utils import get_rotated_bb_from_linestring, explode_to_segments, get_vec_from_segment
+from domino_gym.utils import get_rotated_bb_from_linestring, explode_to_segments, get_vec_from_segment, make_pillar_polygon
 
 import debugvisualizer as dv  # pylint: disable=unused-import
 
@@ -111,7 +111,9 @@ class ParcelEnv(gym.Env):
 
         # 필지 데이터를 저장
         self.parcel_data = parcel_data
-        self.__legal_geoms = []
+        self.__legal_geoms: List[Union[Polygon, MultiPolygon]] = []
+        self.__longest_edge_axis: LineString = None
+        self.__obb_axis: LineString = None
 
         # FIXME: AXIS 방향에 따른 최대 개수가 있긴 함 - 10 은 임시값
         parameter_shape = [10, 10]
@@ -128,6 +130,14 @@ class ParcelEnv(gym.Env):
     @property
     def legal_geoms(self) -> List[Union[Polygon, MultiPolygon]]:
         return self.__legal_geoms
+
+    @property
+    def longest_edge_axis(self) -> LineString:
+        return self.__longest_edge_axis
+
+    @property
+    def obb_axis(self) -> LineString:
+        return self.__obb_axis
 
     def initialize(self):
         legal_geoms = []
@@ -163,9 +173,9 @@ class ParcelEnv(gym.Env):
         assert self.__is_ready, "Environment is not ready, Please call initialize() first."
 
         if action.axis_index == 0:
-            main_axis = self.__longest_edge_axis
+            main_axis = self.longest_edge_axis
         elif action.axis_index == 1:
-            main_axis = self.__obb_axis
+            main_axis = self.obb_axis
 
         # 정해진 축을 기준으로 시작 지점과 벡터를 지정
         rotated_bb = get_rotated_bb_from_linestring(self.parcel_data, main_axis)
@@ -178,3 +188,26 @@ class ParcelEnv(gym.Env):
         base_plane = Plane(origin=origin_point, x_axis=x_axis, y_axis=y_axis)
 
         # action 을 통해 pillars 중심점 지정
+        offset_plane = base_plane.get_offset_plane(action.x_offset, action.y_offset)
+
+        # 중심점을 기준으로 각 pillars 의 위치 지정
+        x_locations = [sum(action.x_intervals[:i]) for i, _ in enumerate(action.x_intervals)]
+        y_locations = [sum(action.y_intervals[:i]) for i, _ in enumerate(action.y_intervals)]
+        pillar_centers: List[np.ndarray] = []
+        for x_location in x_locations:
+            for y_location in y_locations:
+                each_pillar_center = offset_plane.origin + offset_plane.x_axis * x_location + offset_plane.y_axis * y_location
+                pillar_centers.append(each_pillar_center)
+
+        pillar_polygons: List[Polygon] = [
+            make_pillar_polygon(
+                pillar_center,
+                offset_plane.x_axis,
+                offset_plane.y_axis,
+                action.pillar_x_width,
+                action.pillar_y_width
+            )
+            for pillar_center in pillar_centers
+        ]
+
+        return

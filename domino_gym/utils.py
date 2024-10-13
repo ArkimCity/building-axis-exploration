@@ -83,3 +83,18 @@ def get_vec_from_segment(segment: LineString, normalize=False, reverse=False) ->
         end_point = (start_point[0] + xdiff * (1 / distance), start_point[1] + ydiff * (1 / distance))
 
     return np.array((end_point[0] - start_point[0], end_point[1] - start_point[1]))
+
+
+def make_pillar_polygon(
+        pillar_center: np.ndarray,
+        pillar_x_axis: np.ndarray,
+        pillar_y_axis: np.ndarray,
+        pillar_x_width: float,
+        pillar_y_width: float
+) -> Polygon:
+    return Polygon([
+        pillar_center + pillar_x_axis * (-pillar_x_width / 2) + pillar_y_axis * (-pillar_y_width / 2),
+        pillar_center + pillar_x_axis * (pillar_x_width / 2) + pillar_y_axis * (-pillar_y_width / 2),
+        pillar_center + pillar_x_axis * (pillar_x_width / 2) + pillar_y_axis * (pillar_y_width / 2),
+        pillar_center + pillar_x_axis * (-pillar_x_width / 2) + pillar_y_axis * (pillar_y_width / 2)
+    ])

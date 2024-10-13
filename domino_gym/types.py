@@ -22,16 +22,16 @@ class Plane:
             y_axis (np.array, optional): Y 방향. Defaults to np.array([0.0, 1.0]).
         """
         self._origin = origin
-        self._x_axis = x_axis
-        self._y_axis = y_axis
+        self.__x_axis = x_axis
+        self.__y_axis = y_axis
 
         self.__y_checker_cache = {}
 
     def __repr__(self) -> str:
-        return f"o: {self._origin}, x: {self._x_axis}, y: {self._y_axis}"
+        return f"o: {self._origin}, x: {self.__x_axis}, y: {self.__y_axis}"
 
     def flip_plane_y(self):
-        self._y_axis = -self._y_axis
+        self.__y_axis = -self.__y_axis
 
     def is_ccw_from_x_to_y(self):
         """외적을 계산해 x축에서 y축으로 시계방향인지 반시계 방향인지 확인합니다.
@@ -39,7 +39,7 @@ class Plane:
         Returns:
             bool: 일반적인 경우인 x 축이 수평 오른쪽, y축이 수직 위쪽일 경우 true 입니다.
         """
-        determinant = np.cross(self._x_axis, self._y_axis)
+        determinant = np.cross(self.__x_axis, self.__y_axis)
 
         # x축과 y축이 Collinear 한 plane 은 잘못된 결과입니다.
         assert math.isclose(determinant, 0, abs_tol=0.01) is False
@@ -51,19 +51,19 @@ class Plane:
 
     @property
     def x_axis(self):
-        return self._x_axis
+        return self.__x_axis
 
     @x_axis.setter
     def x_axis(self, value: np.ndarray):
-        self._x_axis = value
+        self.__x_axis = value
 
     @property
     def y_axis(self):
-        return self._y_axis
+        return self.__y_axis
 
     @y_axis.setter
     def y_axis(self, value: np.ndarray):
-        self._y_axis = value
+        self.__y_axis = value
 
     @property
     def origin(self):
@@ -83,17 +83,17 @@ class Plane:
         return Polygon(
             [
                 self._origin,
-                self._origin + self._x_axis,
-                self._origin + self._x_axis + self._y_axis,
-                self._origin + self._y_axis,
+                self._origin + self.__x_axis,
+                self._origin + self.__x_axis + self.__y_axis,
+                self._origin + self.__y_axis,
             ]
         )
 
     @property
     def unit_polygon(self) -> Polygon:
         # 1값의 정사각형 도형을 반환합니다. normalize 한 x 와 y axis 를 사용합니다.
-        x_axis_normalized = self._x_axis / np.linalg.norm(self._x_axis)
-        y_axis_normalized = self._y_axis / np.linalg.norm(self._y_axis)
+        x_axis_normalized = self.__x_axis / np.linalg.norm(self.__x_axis)
+        y_axis_normalized = self.__y_axis / np.linalg.norm(self.__y_axis)
         return Polygon(
             [
                 self._origin,
@@ -111,3 +111,10 @@ class Plane:
             self.__y_checker_cache[cache_key] = LineString(cache_key)
 
         return self.__y_checker_cache[cache_key]
+
+    def get_offset_plane(self, x_offset: float, y_offset: float):
+        return Plane(
+            origin=self._origin + self.__x_axis * x_offset + self.__y_axis * y_offset,
+            x_axis=self.__x_axis,
+            y_axis=self.__y_axis,
+        )

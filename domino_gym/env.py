@@ -228,6 +228,7 @@ class ParcelEnv(gym.Env):
         valid_pairs_all_floors: List[List[Tuple[int, int]]] = []
         valid_pillar_centers_all_floors: List[np.ndarray] = []
         valid_pillar_polygons_all_floors: List[List[Polygon]] = []
+        valid_slab_patches_all_floors: List[List[Polygon]] = []
 
         for floor_idx, each_legal_geom in enumerate(self.legal_geoms):
             pillar_polygon_within_bool_map = np.array([
@@ -239,6 +240,7 @@ class ParcelEnv(gym.Env):
             ])
 
             valid_pairs = []
+            valid_slab_patches: List[Polygon] = []
             for i in range(len(pillar_polygon_within_bool_map) - 1):
                 for j in range(len(pillar_polygon_within_bool_map[0]) - 1):
                     pairs = [(i + dx, j + dy) for dx in (0, 1) for dy in (0, 1)]
@@ -247,6 +249,12 @@ class ParcelEnv(gym.Env):
                     if all([pillar_polygon_within_bool_map[x][y] for x, y in pairs]) and (floor_idx == 0 or all([
                         pair in valid_pairs_all_floors[floor_idx - 1] for pair in pairs
                     ])):
+                        valid_slab_patches.append(Polygon([
+                            pillar_centers[i][j],
+                            pillar_centers[i + 1][j],
+                            pillar_centers[i + 1][j + 1],
+                            pillar_centers[i][j + 1]
+                        ]))
                         valid_pairs.extend(pairs)
             valid_pairs = list(set(valid_pairs))
 
@@ -256,6 +264,7 @@ class ParcelEnv(gym.Env):
             valid_pairs_all_floors.append(valid_pairs)
             valid_pillar_centers_all_floors.append(valid_pillar_centers)
             valid_pillar_polygons_all_floors.append(valid_pillar_polygons)
+            valid_slab_patches_all_floors.append(valid_slab_patches)
 
         return valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors
 

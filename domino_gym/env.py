@@ -101,6 +101,28 @@ class SearchSapce:
             y_offset=random.uniform(*self.y_offset),
         )
 
+
+class BuildResult:
+    def __init__(
+            self,
+            base_plane: Plane,
+            offset_plane: Plane,
+            pillar_centers: np.ndarray,
+            pillar_polygons: List[List[Polygon]],
+            valid_pairs_all_floors: List[List[Tuple[int, int]]],
+            valid_pillar_centers_all_floors: List[np.ndarray],
+            valid_pillar_polygons_all_floors: List[List[Polygon]],
+            valid_slab_patches_all_floors: List[List[Polygon]]
+    ):
+        self.base_plane = base_plane
+        self.offset_plane = offset_plane
+        self.pillar_centers = pillar_centers
+        self.pillar_polygons = pillar_polygons
+        self.valid_pairs_all_floors = valid_pairs_all_floors
+        self.valid_pillar_centers_all_floors = valid_pillar_centers_all_floors
+        self.valid_pillar_polygons_all_floors = valid_pillar_polygons_all_floors
+        self.valid_slab_patches_all_floors = valid_slab_patches_all_floors
+
 class ParcelEnv(gym.Env):
     def __init__(self, parcel_data, search_settings: SearchSapce, law_settings: LawSettings):
         """
@@ -266,12 +288,26 @@ class ParcelEnv(gym.Env):
             valid_pillar_polygons_all_floors.append(valid_pillar_polygons)
             valid_slab_patches_all_floors.append(valid_slab_patches)
 
-        return valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors
+        return valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors, valid_slab_patches_all_floors
 
-    def build(self, action: Action):
+    def build(self, action: Action) -> BuildResult:
         assert self.__is_ready, "Environment is not ready, Please call initialize() first."
 
         base_plane, offset_plane, pillar_centers, pillar_polygons = self.make_base(action)
-        valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors = self.find_valid_pillars(pillar_centers, pillar_polygons)
+        (
+            valid_pairs_all_floors,
+            valid_pillar_centers_all_floors,
+            valid_pillar_polygons_all_floors,
+            valid_slab_patches_all_floors
+        ) = self.find_valid_pillars(pillar_centers, pillar_polygons)
 
-        return
+        return BuildResult(
+            base_plane=base_plane,
+            offset_plane=offset_plane,
+            pillar_centers=pillar_centers,
+            pillar_polygons=pillar_polygons,
+            valid_pairs_all_floors=valid_pairs_all_floors,
+            valid_pillar_centers_all_floors=valid_pillar_centers_all_floors,
+            valid_pillar_polygons_all_floors=valid_pillar_polygons_all_floors,
+            valid_slab_patches_all_floors=valid_slab_patches_all_floors
+        )

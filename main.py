@@ -1,9 +1,7 @@
-import random
-import numpy as np
 from shapely.io import from_wkt
 
 import debugvisualizer as dv  # pylint: disable=unused-import
-from domino_gym.env import ParcelEnv, LawSettings, SearchSapce
+from domino_gym.env import ParcelEnv, LawSettings, SearchSapce, BuildResult
 
 PARCEL_EXAMPLES = [
     "POLYGON ((0 0, 30 0, 20 20, 0 10, 0 0))",
@@ -41,6 +39,6 @@ if __name__ == "__main__":
         # NOTE: 테스트용 random action
         action = search_settings.get_random_action()
 
-        result = env.build(action)
+        build_result: BuildResult = env.build(action)
 
-        print(result)
+        print(build_result)

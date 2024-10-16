@@ -35,10 +35,19 @@ if __name__ == "__main__":
 
     env.initialize()
 
+    best_result: BuildResult = None
     for i in range(TRIALS):
         # NOTE: 테스트용 random action
         action = search_settings.get_random_action()
 
         build_result: BuildResult = env.build(action)
 
-        print(build_result)
+        # NOTE: using total area as a temporary score
+        if best_result is None or build_result.total_area > best_result.total_area:
+            print(f"New best result found - Trial {i}: {build_result.total_area}")
+            best_result = build_result
+
+        if i % 100 == 0:
+            print(f"Trial {i}: {best_result.total_area}")
+
+    print(f"Final best result: {best_result.total_area}")

@@ -114,14 +114,52 @@ class BuildResult:
             valid_pillar_polygons_all_floors: List[List[Polygon]],
             valid_slab_patches_all_floors: List[List[Polygon]]
     ):
-        self.base_plane = base_plane
-        self.offset_plane = offset_plane
-        self.pillar_centers = pillar_centers
-        self.pillar_polygons = pillar_polygons
-        self.valid_pairs_all_floors = valid_pairs_all_floors
-        self.valid_pillar_centers_all_floors = valid_pillar_centers_all_floors
-        self.valid_pillar_polygons_all_floors = valid_pillar_polygons_all_floors
-        self.valid_slab_patches_all_floors = valid_slab_patches_all_floors
+        self.__base_plane = base_plane
+        self.__offset_plane = offset_plane
+        self.__pillar_centers = pillar_centers
+        self.__pillar_polygons = pillar_polygons
+        self.__valid_pairs_all_floors = valid_pairs_all_floors
+        self.__valid_pillar_centers_all_floors = valid_pillar_centers_all_floors
+        self.__valid_pillar_polygons_all_floors = valid_pillar_polygons_all_floors
+        self.__valid_slab_patches_all_floors = valid_slab_patches_all_floors
+        self.__total_area = sum(x.area for y in self.__valid_slab_patches_all_floors for x in y)
+
+    @property
+    def base_plane(self):
+        return self.__base_plane
+
+    @property
+    def offset_plane(self):
+        return self.__offset_plane
+
+    @property
+    def pillar_centers(self):
+        return self.__pillar_centers
+
+    @property
+    def pillar_polygons(self):
+        return self.__pillar_polygons
+
+    @property
+    def valid_pairs_all_floors(self):
+        return self.__valid_pairs_all_floors
+
+    @property
+    def valid_pillar_centers_all_floors(self):
+        return self.__valid_pillar_centers_all_floors
+
+    @property
+    def valid_pillar_polygons_all_floors(self):
+        return self.__valid_pillar_polygons_all_floors
+
+    @property
+    def valid_slab_patches_all_floors(self):
+        return self.__valid_slab_patches_all_floors
+
+    @property
+    def total_area(self):
+        return self.__total_area
+
 
 class ParcelEnv(gym.Env):
     def __init__(self, parcel_data, search_settings: SearchSapce, law_settings: LawSettings):
@@ -288,7 +326,12 @@ class ParcelEnv(gym.Env):
             valid_pillar_polygons_all_floors.append(valid_pillar_polygons)
             valid_slab_patches_all_floors.append(valid_slab_patches)
 
-        return valid_pairs_all_floors, valid_pillar_centers_all_floors, valid_pillar_polygons_all_floors, valid_slab_patches_all_floors
+        return (
+            valid_pairs_all_floors,
+            valid_pillar_centers_all_floors,
+            valid_pillar_polygons_all_floors,
+            valid_slab_patches_all_floors
+        )
 
     def build(self, action: Action) -> BuildResult:
         assert self.__is_ready, "Environment is not ready, Please call initialize() first."

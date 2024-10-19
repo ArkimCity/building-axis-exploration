@@ -11,7 +11,7 @@ PARCEL_EXAMPLES = [
 TRIALS = 1000
 
 if __name__ == "__main__":
-    parcel_data = from_wkt(PARCEL_EXAMPLES[0])
+    parcel_polygon = from_wkt(PARCEL_EXAMPLES[0])
 
     axis_index = (0, 1)
     pillar_x_width = (0.2,)
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     law_settings = LawSettings(openspace_width, sunlight_cut_start_height, sunlight_cut_ratio, floor_height, max_floor_count)
     search_settings = SearchSapce(axis_index, pillar_x_width, pillar_y_width, x_intervals, y_intervals, x_offset, y_offset, x_rows_max, y_rows_max)
-    env = ParcelEnv(parcel_data, search_settings, law_settings)
+    env = ParcelEnv(parcel_polygon, search_settings, law_settings)
 
     env.initialize()
 

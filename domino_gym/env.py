@@ -162,10 +162,10 @@ class BuildResult:
 
 
 class ParcelEnv(gym.Env):
-    def __init__(self, parcel_data, search_settings: SearchSapce, law_settings: LawSettings):
+    def __init__(self, parcel_polygon, search_settings: SearchSapce, law_settings: LawSettings):
         """
         Args:
-            parcel_data: shapely.geometry.Polygon
+            parcel_polygon: shapely.geometry.Polygon
             search_settings: SearchSapce
             law_settings: LawSettings
         """
@@ -176,7 +176,7 @@ class ParcelEnv(gym.Env):
         self.__law_settings = law_settings
 
         # 필지 데이터를 저장
-        self.parcel_data = parcel_data
+        self.parcel_polygon = parcel_polygon
         self.__legal_geoms: List[Union[Polygon, MultiPolygon]] = []
         self.__longest_edge_axis: LineString = None
         self.__obb_axis: LineString = None
@@ -208,7 +208,7 @@ class ParcelEnv(gym.Env):
     def initialize(self):
         legal_geoms = []
 
-        legal_geom_base = self.parcel_data.buffer(-self.law_settings.openspace_width)
+        legal_geom_base = self.parcel_polygon.buffer(-self.law_settings.openspace_width)
         for floor_idx in range(self.law_settings.max_floor_count):
 
             current_height = (floor_idx + 1) * self.law_settings.floor_height
@@ -217,19 +217,19 @@ class ParcelEnv(gym.Env):
             else:
                 dy = -current_height * self.law_settings.sunlight_cut_ratio
 
-            parcel_shifted_y = translate(self.parcel_data, yoff=dy)
+            parcel_shifted_y = translate(self.parcel_polygon, yoff=dy)
             each_legal_geom = legal_geom_base.intersection(parcel_shifted_y)
 
             legal_geoms.append(each_legal_geom)
 
         self.__legal_geoms = legal_geoms
 
-        parcel_segments = explode_to_segments(self.parcel_data.exterior)
+        parcel_segments = explode_to_segments(self.parcel_polygon.exterior)
         self.__longest_edge_axis = max(parcel_segments, key=lambda x: x.length)
         self.__obb_axis = LineString(
             [
-                self.parcel_data.minimum_rotated_rectangle.exterior.coords[0],
-                self.parcel_data.minimum_rotated_rectangle.exterior.coords[1],
+                self.parcel_polygon.minimum_rotated_rectangle.exterior.coords[0],
+                self.parcel_polygon.minimum_rotated_rectangle.exterior.coords[1],
             ]
         )
 
@@ -242,7 +242,7 @@ class ParcelEnv(gym.Env):
             main_axis = self.obb_axis
 
         # 정해진 축을 기준으로 시작 지점과 벡터를 지정
-        rotated_bb = get_rotated_bb_from_linestring(self.parcel_data, main_axis)
+        rotated_bb = get_rotated_bb_from_linestring(self.parcel_polygon, main_axis)
         bb_segments = explode_to_segments(rotated_bb.exterior)
 
         origin_point = np.array(bb_segments[0].coords[0])

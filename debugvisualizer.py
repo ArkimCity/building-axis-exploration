@@ -9,7 +9,6 @@ from typing import Any, List, Tuple
 
 import plotly
 import plotly.graph_objects as go
-from plotly.missing_ipywidgets import FigureWidget
 from plotly.subplots import make_subplots
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry.base import BaseGeometry, GeometrySequence
@@ -18,7 +17,7 @@ from vscodedebugvisualizer import globalVisualizationFactory
 COLORS = plotly.colors.DEFAULT_PLOTLY_COLORS
 
 
-def gen_fig(rows=1, cols=1) -> FigureWidget:
+def gen_fig(rows=1, cols=1):
     """그림을 그릴 figure를 생성한다.
 
     Args:
@@ -35,7 +34,7 @@ def gen_fig(rows=1, cols=1) -> FigureWidget:
     return fig
 
 
-def fig_to_json(fig: FigureWidget, save_name="dv.html") -> str:
+def fig_to_json(fig, save_name="dv.html") -> str:
     """Figure를 plotly json으로 변환한다.
 
     Args:
